@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Invoice Management</title>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css"
+    />
+
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,300;1,400&display=swap");
+      :root {
+        --green: #4caf50;
+      }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        background: #f5f5f5;
+        font-family: "Arial";
+        padding: 15px 100px;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+      header {
+        display: flex;
+        justify-content: space-between;
+      }
+      header button {
+        padding: 5px 20px;
+        background: var(--green);
+        color: white;
+        border: none;
+        border-radius: 5%;
+        cursor: pointer;
+      }
+      #sort_search {
+        display: flex;
+      }
+
+      #search {
+        padding: 0px 15px;
+      }
+      #sort_search select {
+        padding: 5px 10px;
+      }
+      #search input {
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        padding: 5px 10px;
+      }
+      #table {
+        overflow-x: auto;
+      }
+
+      #table table {
+        width: 100%;
+        border: 1px solid #ddd;
+        background: white;
+        border-collapse: collapse;
+        box-shadow: 2px 2px rgba(0, 0, 0, 0.1);
+        border-spacing: 0;
+      }
+      #table th {
+        padding: 10px;
+        /* width: 200px; */
+      }
+      #table td {
+        padding: 10px;
+        text-align: center;
+      }
+      #table tr:nth-child(even) {
+        background: #f2f2f2;
+      }
+      #table tbody tr td:last-child {
+        cursor: pointer;
+        color: red;
+      }
+      #table tbody tr td:nth-child(5) span {
+        background: yellow;
+        color: black;
+      }
+      .add_form {
+        opacity: 0;
+        visibility: hidden;
+        max-height: 0;
+        overflow: hidden;
+        background: white;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        transition: opacity 0.9s ease, max-height 0.9s ease;
+      }
+      .add_form.open {
+        opacity: 1;
+        visibility: visible;
+        max-height: 1000px; /* large enough to fit your content */
+        padding: 20px;
+      }
+      .form-group {
+        display: flex;
+        flex-direction: column;
+        padding: 10px 0px;
+      }
+      .form-group input,
+      select {
+        padding: 5px 10px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+      }
+      .form-group label {
+        padding-bottom: 5px;
+      }
+      .button-group button {
+        border-radius: 4px;
+        color: white;
+        border: none;
+        padding: 5px 10px;
+        cursor: pointer;
+      }
+      .button-group button:nth-child(odd) {
+        width: 70px;
+        background: var(--green);
+      }
+      .button-group button:nth-child(even) {
+        background: red;
+      }
+      @media screen and (max-width: 760px) {
+        body {
+          padding: 5px 25px;
+        }
+        header h1 {
+          font-size: 20px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1><strong>Invoice Management</strong></h1>
+      <button type="button" name="new invoice" id="add_invoice">
+        New invoice
+      </button>
+    </header>
+    <div class="add_form">
+      <form action="#" method="post">
+        <h2>Create New Invoice</h2>
+        <div class="form-group">
+          <label>Client Name</label>
+          <input
+            type="text"
+            name="client_name"
+            class="form-element"
+            id="client_name"
+          />
+        </div>
+        <div class="form-group">
+          <label>Date</label>
+          <input
+            type="date"
+            name="client_name"
+            class="form-element"
+            id="date"
+          />
+        </div>
+        <div class="form-group">
+          <label>Amount</label>
+          <input type="text" name="amount" class="form-element" id="amount" />
+        </div>
+        <div class="form-group">
+          <label>Status</label>
+          <select id="status">
+            <option value="paid">Paid</option>
+            <option value="pending">Pending</option>
+            <option value="draft">Draft</option>
+          </select>
+        </div>
+        <div class="button-group">
+          <button type="submit" name="save_button" id="save_button">
+            Save
+          </button>
+          <button type="button" name="cancel_button" id="cancel_button">
+            Cancel
+          </button>
+        </div>
+      </form>
+    </div>
+    <div id="sort_search">
+      <select id="sort" onchange="searchStatus(this)">
+        <option value="all">All Statuses</option>
+        <option value="paid">Paid</option>
+        <option value="pending">Pending</option>
+        <option value="draft">Draft</option>
+      </select>
+      <div id="search">
+        <input
+          name="search_input"
+          placeholder="Search invoices...."
+          class="search_input"
+          onkeyup="searchParam(this)"
+        />
+      </div>
+    </div>
+
+    <div id="table">
+      <table>
+        <tr>
+          <th>Invoice ID</th>
+          <th>Client</th>
+          <th>Date</th>
+          <th>Amount</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+        <tbody id="invoice_list"></tbody>
+      </table>
+    </div>
+
+    <script>
+      let addButton = document.getElementById("add_invoice");
+      let cancelButton = document.getElementById("cancel_button");
+      let addForm = document.querySelector(".add_form");
+      let invoiceList = null;
+
+      listInvoice();
+
+      addButton.addEventListener("click", (e) => {
+        addForm.classList.add("open");
+      });
+
+      cancelButton.addEventListener("click", (e) => {
+        addForm.classList.remove("open");
+      });
+
+      let saveButton = document.getElementById("save_button");
+
+      saveButton.addEventListener("click", (e) => {
+        e.preventDefault();
+
+        //get form data
+        let formData = getformData();
+        addInvoice(formData);
+        clearForm();
+        listInvoice();
+        //hideform
+        addForm.classList.remove("open");
+      });
+
+      function getformData() {
+        return {
+          id: Date.now(),
+          client_name: document.getElementById("client_name").value,
+          date: document.getElementById("date").value,
+          amount: document.getElementById("amount").value,
+          status: document.getElementById("status").value,
+        };
+      }
+
+      function listInvoice(filterStatus = "all") {
+        let formData = JSON.parse(localStorage.getItem("formData")) || []; //this converts json to array;
+
+        if (filterStatus != "all") {
+          formData = formData.filter(
+            (invoice) => invoice.status === filterStatus
+          );
+        }
+
+        renderInvoice(formData);
+      }
+
+      function renderInvoice(formData) {
+        let tableBody = document.getElementById("invoice_list");
+        const row = document.createElement("tr");
+        tableBody.innerHTML = "";
+        // Iterate over each invoice object
+        formData.forEach((invoice, index) => {
+          const row = document.createElement("tr");
+
+          row.innerHTML = `
+          <td>${invoice.id}</td>
+          <td>${invoice.client_name}</td>
+          <td>${invoice.date}</td>
+          <td>${invoice.amount}</td>
+          <td><span>${invoice.status}</span></td>
+          <td><i class="fa-solid fa-trash"></i></td>
+          `;
+
+          row.setAttribute("data-index", index);
+          tableBody.appendChild(row);
+        });
+
+        //add listener for delete icon
+        let deleteIcon = document.querySelectorAll("i");
+        deleteIcon.forEach((icon) => {
+          icon.addEventListener("click", (e) => {
+            //remove from local storage
+            let existingData =
+              JSON.parse(localStorage.getItem("formData")) || [];
+            let index = e.currentTarget
+              .closest("tr")
+              .getAttribute("data-index");
+
+            existingData.splice(index, 1);
+            localStorage.setItem("formData", JSON.stringify(existingData));
+            listInvoice();
+          });
+        });
+      }
+      function addInvoice(formData) {
+        let existingData = JSON.parse(localStorage.getItem("formData")) || [];
+        existingData.push(formData);
+        localStorage.setItem("formData", JSON.stringify(existingData)); //converts array of object to json
+      }
+
+      function searchStatus(param) {
+        let filterValue = param.value;
+        listInvoice(filterValue);
+      }
+
+      function searchParam(param) {
+        let filterValue = param.value;
+        let formData = JSON.parse(localStorage.getItem("formData")) || [];
+        if (filterValue != "") {
+          formData = formData.filter((invoice) => {
+            return (
+              invoice.client_name.includes(filterValue) ||
+              invoice.amount.includes(filterValue) ||
+              invoice.status.includes(filterValue)
+            );
+          });
+        }
+        renderInvoice(formData);
+      }
+
+      function clearForm() {
+        document.getElementById("client_name").value = "";
+        document.getElementById("client_name").value = "";
+        document.getElementById("date").value = "";
+        document.getElementById("amount").value = "";
+        document.getElementById("status").value = "";
+      }
+    </script>
+  </body>
+</html>
